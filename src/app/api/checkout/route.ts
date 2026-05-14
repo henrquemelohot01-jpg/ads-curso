@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         description: 'ADS Master Pro - Acesso Vitalício Completo',
         payment_method_id: 'pix',
         payer: {
-          email: email || 'cliente@adsmasterpro.com',
+          email: email || 'henrquemelohot01@gmail.com',
           first_name: name || 'Cliente',
           last_name: 'ADS Master Pro',
         },

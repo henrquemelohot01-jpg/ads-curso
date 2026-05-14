@@ -93,22 +93,31 @@ export default function PlataformaPage() {
     setAuthLoading(true);
     setAuthError('');
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        shouldCreateUser: true,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          shouldCreateUser: true,
+        },
+      });
 
-    if (error) {
-      console.error('Supabase OTP error:', error);
-      setAuthError(error.message === 'For security purposes, you can only request this after 60 seconds.'
-        ? 'Aguarde 60 segundos para reenviar o código.'
-        : `Erro: ${error.message}`);
-    } else {
-      setOtpSent(true);
-      setCountdown(60);
-      setAuthError('');
+      if (error) {
+        console.error('Supabase OTP error:', error);
+        if (error.message.includes('60 seconds')) {
+          setAuthError('Aguarde 60 segundos para reenviar o código.');
+        } else if (error.message.includes('rate limit')) {
+          setAuthError('Muitas tentativas. Aguarde alguns minutos.');
+        } else {
+          setAuthError(`Erro: ${error.message}`);
+        }
+      } else {
+        setOtpSent(true);
+        setCountdown(60);
+        setAuthError('');
+      }
+    } catch (err: any) {
+      console.error('Network error:', err);
+      setAuthError(`Erro de conexão: ${err?.message || 'Verifique sua internet'}`);
     }
     setAuthLoading(false);
   };
