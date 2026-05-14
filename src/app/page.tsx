@@ -36,7 +36,7 @@ export default function HomePage() {
         <section className="hero">
           <div className="container">
             <div className="hero-content fade-up">
-              <span className="badge">🚀 Atualizado para 2025/2026</span>
+              <span className="badge">🚀 Atualizado para 2026/2027</span>
               <h1>Curso de <span>Facebook Ads</span> — Domine Tráfego Pago e Escale Seus Resultados</h1>
               <p>Treinamento completo de <strong>Meta Ads</strong> do zero ao avançado. Aprenda a <strong>anunciar com tráfego pago</strong>, configurar Pixel, campanhas de vendas, remarketing e escalar resultados reais.</p>
               <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
@@ -99,8 +99,8 @@ export default function HomePage() {
             <h2 className="section-title">Acesso <span>Completo</span></h2>
             <p className="section-desc" style={{ marginLeft:'auto', marginRight:'auto' }}>Pagamento único. Sem mensalidade. Sem pegadinha.</p>
             <div style={{ display:'flex', justifyContent:'center', marginTop:40 }}>
-              <div className="price-card featured" style={{ maxWidth:480, width:'100%', position:'relative', overflow:'hidden' }}>
-                <div style={{ position:'absolute', top:16, right:-35, background:'var(--primary)', color:'#0d0f12', padding:'6px 40px', fontSize:'.75rem', fontWeight:700, transform:'rotate(45deg)', letterSpacing:1 }}>OFERTA</div>
+              <div className="price-card featured" style={{ maxWidth:480, width:'100%', position:'relative', overflow:'visible' }}>
+                <div style={{ position:'absolute', top:16, right:-35, background:'var(--primary)', color:'#0d0f12', padding:'6px 40px', fontSize:'.75rem', fontWeight:700, transform:'rotate(45deg)', letterSpacing:1, zIndex:1 }}>OFERTA</div>
                 <div style={{ fontSize:'2.5rem', marginBottom:4 }}>🏆</div>
                 <h3 style={{ fontSize:'1.5rem', marginBottom:4 }}>Acesso Vitalício Completo</h3>
                 <p style={{ color:'var(--text-muted)', fontSize:'.95rem', marginBottom:20 }}>Todo o treinamento por um único pagamento</p>
@@ -112,7 +112,7 @@ export default function HomePage() {
                   <li>✅ Do iniciante ao avançado</li>
                   <li>✅ Acesso vitalício e imediato</li>
                   <li>✅ Todas as atualizações futuras incluídas</li>
-                  <li>✅ Conteúdo 100% atualizado 2025/2026</li>
+                  <li>✅ Conteúdo 100% atualizado 2026/2027</li>
                   <li>✅ Estratégias reais com exemplos práticos</li>
                   <li>✅ Templates e checklists profissionais</li>
                   <li>✅ Método validado para gerar resultados reais</li>
