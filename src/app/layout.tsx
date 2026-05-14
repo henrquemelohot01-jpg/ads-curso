@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Curso Facebook Ads para IPTV 2025 — Tráfego Pago | ADS Master Pro",
-  description: "Aprenda Facebook Ads e Meta Ads para anunciar IPTV e escalar resultados com tráfego pago. 100 aulas práticas. Acesso vitalício por R$37.",
-  keywords: "facebook ads, meta ads, tráfego pago, curso facebook ads, anunciar iptv, tráfego pago iptv, curso tráfego pago",
+  title: "Curso Facebook Ads 2026 — Tráfego Pago | ADS Master Pro",
+  description: "Aprenda Facebook Ads e Meta Ads para escalar resultados com tráfego pago. 100 aulas práticas do zero ao avançado. Acesso vitalício por R$37.",
+  keywords: "facebook ads, meta ads, tráfego pago, curso facebook ads, curso tráfego pago, anunciar no facebook, curso meta ads 2026",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
