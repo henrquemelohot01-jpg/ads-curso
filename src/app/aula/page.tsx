@@ -25,13 +25,25 @@ export default function AulaPage() {
     setModIdx(parseInt(params.get('modulo') || '0'));
     setAulaIdx(parseInt(params.get('aula') || '0'));
 
-    // Carregar dados do curso
-    const script = document.createElement('script');
-    script.src = '/js/dados-curso.js';
-    script.onload = () => {
-      if ((window as any).CURSO) setCurso((window as any).CURSO);
-    };
-    document.head.appendChild(script);
+    // Carregar dados do curso via fetch (mais confiável que script tag no Vercel)
+    fetch('/js/dados-curso.js')
+      .then(res => res.text())
+      .then(code => {
+        // Executar o script para definir CURSO
+        const fn = new Function(code + '\nreturn typeof CURSO !== "undefined" ? CURSO : null;');
+        const data = fn();
+        if (data) setCurso(data);
+      })
+      .catch(err => {
+        console.error('Erro ao carregar dados do curso:', err);
+        // Fallback: tentar via script tag
+        const script = document.createElement('script');
+        script.src = '/js/dados-curso.js';
+        script.onload = () => {
+          if ((window as any).CURSO) setCurso((window as any).CURSO);
+        };
+        document.head.appendChild(script);
+      });
   }, []);
 
   if (loading) return <div style={{ display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#0a0a0a',color:'#888' }}>Carregando...</div>;
