@@ -5,6 +5,18 @@ export const metadata: Metadata = {
   title: "Curso Facebook Ads 2026 — Tráfego Pago | ADS Master Pro",
   description: "Aprenda Facebook Ads e Meta Ads para escalar resultados com tráfego pago. 100 aulas práticas do zero ao avançado. Acesso vitalício por R$37.",
   keywords: "facebook ads, meta ads, tráfego pago, curso facebook ads, curso tráfego pago, anunciar no facebook, curso meta ads 2026",
+  openGraph: {
+    title: "Curso Facebook Ads 2026 — Tráfego Pago | ADS Master Pro",
+    description: "Aprenda Facebook Ads e Meta Ads para escalar resultados com tráfego pago. 100 aulas práticas do zero ao avançado. Acesso vitalício por R$37.",
+    url: "https://adsmasteriptv.xyz",
+    siteName: "ADS Master Pro",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Curso Facebook Ads 2026 — Tráfego Pago | ADS Master Pro",
+    description: "Aprenda Facebook Ads e Meta Ads para escalar resultados com tráfego pago. 100 aulas práticas do zero ao avançado. Acesso vitalício por R$37.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
