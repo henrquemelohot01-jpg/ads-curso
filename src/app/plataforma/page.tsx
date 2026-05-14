@@ -124,8 +124,8 @@ export default function PlataformaPage() {
 
   // Verificar código OTP digitado
   const verificarCodigo = async () => {
-    if (otpCode.length !== 6) {
-      setAuthError('Digite o código de 6 dígitos');
+    if (otpCode.length !== 8) {
+      setAuthError('Digite o código de 8 dígitos');
       return;
     }
     setAuthLoading(true);
@@ -271,7 +271,7 @@ export default function PlataformaPage() {
           ) : (
             <>
               <p style={{ color: '#888', marginBottom: 8, fontSize: '.95rem' }}>
-                Enviamos um código de 6 dígitos para:
+                Enviamos um código de 8 dígitos para:
               </p>
               <p style={{ color: '#00e88f', fontWeight: 700, marginBottom: 24, fontSize: '.95rem' }}>
                 {email}
@@ -279,11 +279,11 @@ export default function PlataformaPage() {
 
               <input
                 type="text"
-                placeholder="000000"
+                placeholder="00000000"
                 value={otpCode}
-                onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 onKeyDown={e => e.key === 'Enter' && verificarCodigo()}
-                maxLength={6}
+                maxLength={8}
                 style={{
                   width: '100%', padding: '16px 20px', background: '#1a1a1a', border: '1px solid #2a2a2a',
                   borderRadius: 12, fontSize: '1.5rem', color: '#fff', outline: 'none', marginBottom: 16,
@@ -296,12 +296,12 @@ export default function PlataformaPage() {
 
               <button
                 onClick={verificarCodigo}
-                disabled={authLoading || otpCode.length !== 6}
+                disabled={authLoading || otpCode.length !== 8}
                 style={{
                   width: '100%', padding: '16px 24px',
-                  background: (authLoading || otpCode.length !== 6) ? '#333' : 'linear-gradient(135deg, #00e88f, #00b8d4)',
-                  color: (authLoading || otpCode.length !== 6) ? '#888' : '#0a0a0a', border: 'none', borderRadius: 12,
-                  fontSize: '1rem', fontWeight: 700, cursor: (authLoading || otpCode.length !== 6) ? 'not-allowed' : 'pointer',
+                  background: (authLoading || otpCode.length !== 8) ? '#333' : 'linear-gradient(135deg, #00e88f, #00b8d4)',
+                  color: (authLoading || otpCode.length !== 8) ? '#888' : '#0a0a0a', border: 'none', borderRadius: 12,
+                  fontSize: '1rem', fontWeight: 700, cursor: (authLoading || otpCode.length !== 8) ? 'not-allowed' : 'pointer',
                 }}
               >
                 {authLoading ? '⏳ Verificando...' : '✅ Confirmar Código'}
