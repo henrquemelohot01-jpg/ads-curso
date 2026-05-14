@@ -101,9 +101,10 @@ export default function PlataformaPage() {
     });
 
     if (error) {
+      console.error('Supabase OTP error:', error);
       setAuthError(error.message === 'For security purposes, you can only request this after 60 seconds.'
         ? 'Aguarde 60 segundos para reenviar o código.'
-        : 'Erro ao enviar código. Tente novamente.');
+        : `Erro: ${error.message}`);
     } else {
       setOtpSent(true);
       setCountdown(60);
