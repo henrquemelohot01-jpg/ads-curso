@@ -25,6 +25,14 @@ export default function PlataformaPage() {
   const [checking, setChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Login com Email OTP
+  const [email, setEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [countdown, setCountdown] = useState(0);
+
   // Verificar acesso vitalício no Supabase
   const checkAccess = async (userId: string) => {
     try {
@@ -36,11 +44,9 @@ export default function PlataformaPage() {
       const data = await res.json();
       if (data.hasAccess) {
         setPaid(true);
-        // Cache local para carregar mais rápido
         localStorage.setItem('ads_paid_users', JSON.stringify([userId]));
       }
     } catch {
-      // Fallback para localStorage
       const paidUsers = JSON.parse(localStorage.getItem('ads_paid_users') || '[]');
       if (paidUsers.includes(userId)) setPaid(true);
     }
@@ -50,10 +56,8 @@ export default function PlataformaPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
-        // Check local cache primeiro para UX rápida
         const paidUsers = JSON.parse(localStorage.getItem('ads_paid_users') || '[]');
         if (paidUsers.includes(session.user.id)) setPaid(true);
-        // Depois verifica no Supabase (fonte real)
         checkAccess(session.user.id);
       }
       setLoading(false);
@@ -70,23 +74,63 @@ export default function PlataformaPage() {
       setLoading(false);
     });
 
-    // OAuth callback
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(() => {
-        window.history.replaceState({}, '', '/plataforma');
-      });
-    }
-
     return () => subscription.unsubscribe();
   }, []);
 
-  const loginGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+  // Countdown timer para reenviar código
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  // Enviar código OTP para o email
+  const enviarCodigo = async () => {
+    if (!email.trim()) {
+      setAuthError('Digite seu email');
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError('');
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        shouldCreateUser: true,
+      },
     });
+
+    if (error) {
+      setAuthError(error.message === 'For security purposes, you can only request this after 60 seconds.'
+        ? 'Aguarde 60 segundos para reenviar o código.'
+        : 'Erro ao enviar código. Tente novamente.');
+    } else {
+      setOtpSent(true);
+      setCountdown(60);
+      setAuthError('');
+    }
+    setAuthLoading(false);
+  };
+
+  // Verificar código OTP
+  const verificarCodigo = async () => {
+    if (!otpCode.trim() || otpCode.length < 6) {
+      setAuthError('Digite o código de 6 dígitos');
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError('');
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: otpCode.trim(),
+      type: 'email',
+    });
+
+    if (error) {
+      setAuthError('Código inválido ou expirado. Tente novamente.');
+    }
+    setAuthLoading(false);
   };
 
   const logout = async () => {
@@ -129,7 +173,6 @@ export default function PlataformaPage() {
       });
       const data = await res.json();
       if (data.approved) {
-        // Salvar acesso vitalício local (cache)
         localStorage.setItem('ads_paid_users', JSON.stringify([user.id]));
         setPaid(true);
         setShowPayment(false);
@@ -160,32 +203,129 @@ export default function PlataformaPage() {
     );
   }
 
-  // TELA DE LOGIN COM GOOGLE
+  // ============ TELA DE LOGIN/CADASTRO COM EMAIL ============
   if (!user) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0a0a0a', padding: 24 }}>
         <div style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: 16, padding: 48, maxWidth: 440, width: '100%', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎯</div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 8 }}>ADS Master Pro</h1>
-          <p style={{ color: '#888', marginBottom: 32, fontSize: '.95rem' }}>Faça login para acessar o treinamento completo de Facebook Ads</p>
-          <button onClick={loginGoogle} style={{
-            width: '100%', padding: '16px 24px', background: '#fff', color: '#333', border: 'none', borderRadius: 12,
-            fontSize: '1rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-            transition: 'transform .2s, box-shadow .2s',
-          }}
-          onMouseOver={e => { (e.currentTarget).style.transform = 'translateY(-2px)'; (e.currentTarget).style.boxShadow = '0 8px 24px rgba(0,0,0,.3)'; }}
-          onMouseOut={e => { (e.currentTarget).style.transform = ''; (e.currentTarget).style.boxShadow = ''; }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Entrar com Google
-          </button>
-          <p style={{ color: '#555', fontSize: '.8rem', marginTop: 24 }}>🔒 Login seguro via Google</p>
+
+          {!otpSent ? (
+            <>
+              <p style={{ color: '#888', marginBottom: 24, fontSize: '.95rem' }}>
+                Digite seu email para acessar o treinamento
+              </p>
+
+              <input
+                type="email"
+                placeholder="Seu melhor email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && enviarCodigo()}
+                style={{
+                  width: '100%', padding: '16px 20px', background: '#1a1a1a', border: '1px solid #2a2a2a',
+                  borderRadius: 12, fontSize: '1rem', color: '#fff', outline: 'none', marginBottom: 16,
+                  boxSizing: 'border-box', transition: 'border-color .3s',
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = '#00e88f'}
+                onBlur={e => e.currentTarget.style.borderColor = '#2a2a2a'}
+              />
+
+              <button
+                onClick={enviarCodigo}
+                disabled={authLoading}
+                style={{
+                  width: '100%', padding: '16px 24px',
+                  background: authLoading ? '#333' : 'linear-gradient(135deg, #00e88f, #00b8d4)',
+                  color: authLoading ? '#888' : '#0a0a0a', border: 'none', borderRadius: 12,
+                  fontSize: '1rem', fontWeight: 700, cursor: authLoading ? 'wait' : 'pointer',
+                  transition: 'transform .2s, box-shadow .2s',
+                }}
+                onMouseOver={e => { if (!authLoading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,232,143,0.3)'; } }}
+                onMouseOut={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+              >
+                {authLoading ? '⏳ Enviando...' : '📧 Enviar Código de Acesso'}
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ color: '#888', marginBottom: 8, fontSize: '.95rem' }}>
+                Enviamos um código de 6 dígitos para:
+              </p>
+              <p style={{ color: '#00e88f', fontWeight: 700, marginBottom: 24, fontSize: '.95rem' }}>
+                {email}
+              </p>
+
+              <input
+                type="text"
+                placeholder="Digite o código de 6 dígitos"
+                value={otpCode}
+                onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={e => e.key === 'Enter' && verificarCodigo()}
+                maxLength={6}
+                style={{
+                  width: '100%', padding: '16px 20px', background: '#1a1a1a', border: '1px solid #2a2a2a',
+                  borderRadius: 12, fontSize: '1.5rem', color: '#fff', outline: 'none', marginBottom: 16,
+                  boxSizing: 'border-box', textAlign: 'center', letterSpacing: '8px', fontWeight: 700,
+                  transition: 'border-color .3s',
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = '#00e88f'}
+                onBlur={e => e.currentTarget.style.borderColor = '#2a2a2a'}
+                autoFocus
+              />
+
+              <button
+                onClick={verificarCodigo}
+                disabled={authLoading || otpCode.length < 6}
+                style={{
+                  width: '100%', padding: '16px 24px',
+                  background: (authLoading || otpCode.length < 6) ? '#333' : 'linear-gradient(135deg, #00e88f, #00b8d4)',
+                  color: (authLoading || otpCode.length < 6) ? '#888' : '#0a0a0a', border: 'none', borderRadius: 12,
+                  fontSize: '1rem', fontWeight: 700, cursor: (authLoading || otpCode.length < 6) ? 'not-allowed' : 'pointer',
+                  transition: 'transform .2s, box-shadow .2s', marginBottom: 12,
+                }}
+                onMouseOver={e => { if (!authLoading && otpCode.length >= 6) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,232,143,0.3)'; } }}
+                onMouseOut={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+              >
+                {authLoading ? '⏳ Verificando...' : '✅ Confirmar Código'}
+              </button>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <button
+                  onClick={() => { setOtpSent(false); setOtpCode(''); setAuthError(''); }}
+                  style={{ background: 'none', border: 'none', color: '#888', fontSize: '.85rem', cursor: 'pointer' }}
+                >
+                  ← Trocar email
+                </button>
+                <button
+                  onClick={enviarCodigo}
+                  disabled={countdown > 0 || authLoading}
+                  style={{
+                    background: 'none', border: 'none',
+                    color: countdown > 0 ? '#555' : '#00e88f',
+                    fontSize: '.85rem', cursor: countdown > 0 ? 'default' : 'pointer',
+                  }}
+                >
+                  {countdown > 0 ? `Reenviar em ${countdown}s` : '🔄 Reenviar código'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {authError && (
+            <p style={{ color: '#ff6b6b', fontSize: '.85rem', marginTop: 16, padding: '10px 16px', background: 'rgba(255,107,107,0.08)', borderRadius: 8, border: '1px solid rgba(255,107,107,0.15)' }}>
+              {authError}
+            </p>
+          )}
+
+          <p style={{ color: '#555', fontSize: '.8rem', marginTop: 24 }}>🔒 Acesso seguro • Sem senha necessária</p>
         </div>
       </div>
     );
   }
 
-  // MODAL DE PAGAMENTO PIX
+  // ============ MODAL DE PAGAMENTO PIX ============
   if (showPayment && pixData) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0a0a0a', padding: 24 }}>
@@ -233,7 +373,7 @@ export default function PlataformaPage() {
     );
   }
 
-  // PLATAFORMA — LISTA DE MÓDULOS
+  // ============ PLATAFORMA — LISTA DE MÓDULOS ============
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a' }}>
       {/* HEADER */}
@@ -241,10 +381,10 @@ export default function PlataformaPage() {
         <span style={{ fontWeight: 800, fontSize: '1.2rem', background: 'linear-gradient(135deg, #00e88f, #00b8d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ADS Master Pro</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {user.user_metadata?.avatar_url && (
-              <img src={user.user_metadata.avatar_url} alt="" width={32} height={32} style={{ borderRadius: '50%', border: '2px solid #2a2a2a', pointerEvents: 'auto' }} />
-            )}
-            <span style={{ fontSize: '.9rem', color: '#888' }}>{user.user_metadata?.full_name || user.email}</span>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #00e88f, #00b8d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.85rem', fontWeight: 700, color: '#0a0a0a' }}>
+              {(user.email || '?')[0].toUpperCase()}
+            </div>
+            <span style={{ fontSize: '.9rem', color: '#888' }}>{user.email}</span>
           </div>
           {paid && <span style={{ background: 'rgba(0,232,143,0.1)', color: '#00e88f', padding: '4px 12px', borderRadius: 20, fontSize: '.75rem', fontWeight: 700 }}>♾️ VITALÍCIO</span>}
           <button onClick={logout} style={{ padding: '8px 16px', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, color: '#888', fontSize: '.8rem', cursor: 'pointer' }}>Sair</button>
