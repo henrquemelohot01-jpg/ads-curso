@@ -25,9 +25,10 @@ export default function PlataformaPage() {
   const [checking, setChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Login com Email
+  // Login com Email OTP
   const [email, setEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -52,22 +53,6 @@ export default function PlataformaPage() {
   };
 
   useEffect(() => {
-    // Verificar hash de autenticação (magic link redirect)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get('access_token')) {
-      // Magic link retornou com token
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          setUser(session.user);
-          checkAccess(session.user.id);
-        }
-        setLoading(false);
-      });
-      // Limpar hash da URL
-      window.history.replaceState({}, '', '/plataforma');
-      return;
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
@@ -99,8 +84,8 @@ export default function PlataformaPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Enviar magic link para o email
-  const enviarLink = async () => {
+  // Enviar código OTP para o email
+  const enviarCodigo = async () => {
     if (!email.trim()) {
       setAuthError('Digite seu email');
       return;
@@ -113,27 +98,57 @@ export default function PlataformaPage() {
         email: email.trim(),
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/plataforma`,
         },
       });
 
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('Supabase OTP error:', error);
         if (error.message.includes('60 seconds')) {
-          setAuthError('Aguarde 60 segundos para reenviar.');
+          setAuthError('Aguarde 60 segundos para reenviar o código.');
         } else if (error.message.includes('rate limit') || error.message.includes('Rate limit')) {
           setAuthError('Muitas tentativas. Aguarde alguns minutos.');
         } else {
           setAuthError(`Erro: ${error.message}`);
         }
       } else {
-        setEmailSent(true);
+        setOtpSent(true);
         setCountdown(60);
         setAuthError('');
       }
     } catch (err: any) {
       console.error('Network error:', err);
       setAuthError(`Erro de conexão: ${err?.message || 'Verifique sua internet'}`);
+    }
+    setAuthLoading(false);
+  };
+
+  // Verificar código OTP digitado
+  const verificarCodigo = async () => {
+    if (otpCode.length !== 6) {
+      setAuthError('Digite o código de 6 dígitos');
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError('');
+
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: otpCode,
+        type: 'email',
+      });
+
+      if (error) {
+        console.error('OTP verify error:', error);
+        if (error.message.includes('expired') || error.message.includes('invalid')) {
+          setAuthError('Código inválido ou expirado. Solicite um novo.');
+        } else {
+          setAuthError(`Erro: ${error.message}`);
+        }
+      }
+    } catch (err: any) {
+      console.error('Verify error:', err);
+      setAuthError(`Erro de conexão: ${err?.message || 'Tente novamente'}`);
     }
     setAuthLoading(false);
   };
@@ -208,7 +223,7 @@ export default function PlataformaPage() {
     );
   }
 
-  // ============ TELA DE LOGIN COM EMAIL ============
+  // ============ TELA DE LOGIN COM CÓDIGO OTP ============
   if (!user) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0a0a0a', padding: 24 }}>
@@ -216,10 +231,10 @@ export default function PlataformaPage() {
           <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎯</div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 8 }}>ADS Master Pro</h1>
 
-          {!emailSent ? (
+          {!otpSent ? (
             <>
               <p style={{ color: '#888', marginBottom: 24, fontSize: '.95rem' }}>
-                Digite seu email para receber o link de acesso
+                Digite seu email para acessar o treinamento
               </p>
 
               <input
@@ -227,7 +242,7 @@ export default function PlataformaPage() {
                 placeholder="Seu melhor email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && enviarLink()}
+                onKeyDown={e => e.key === 'Enter' && enviarCodigo()}
                 style={{
                   width: '100%', padding: '16px 20px', background: '#1a1a1a', border: '1px solid #2a2a2a',
                   borderRadius: 12, fontSize: '1rem', color: '#fff', outline: 'none', marginBottom: 16,
@@ -238,7 +253,7 @@ export default function PlataformaPage() {
               />
 
               <button
-                onClick={enviarLink}
+                onClick={enviarCodigo}
                 disabled={authLoading}
                 style={{
                   width: '100%', padding: '16px 24px',
@@ -250,45 +265,57 @@ export default function PlataformaPage() {
                 onMouseOver={e => { if (!authLoading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,232,143,0.3)'; } }}
                 onMouseOut={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
               >
-                {authLoading ? '⏳ Enviando...' : '📧 Enviar Link de Acesso'}
+                {authLoading ? '⏳ Enviando...' : '📧 Enviar Código de Acesso'}
               </button>
             </>
           ) : (
             <>
-              <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>📩</div>
-              <p style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, marginBottom: 8 }}>
-                Email enviado com sucesso!
-              </p>
               <p style={{ color: '#888', marginBottom: 8, fontSize: '.95rem' }}>
-                Enviamos um link de acesso para:
+                Enviamos um código de 6 dígitos para:
               </p>
               <p style={{ color: '#00e88f', fontWeight: 700, marginBottom: 24, fontSize: '.95rem' }}>
                 {email}
               </p>
 
-              <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, padding: 20, marginBottom: 20, textAlign: 'left' }}>
-                <p style={{ color: '#fff', fontSize: '.9rem', fontWeight: 600, marginBottom: 12 }}>📋 Como acessar:</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ color: '#ccc', fontSize: '.85rem', margin: 0 }}>1️⃣ Abra seu email</p>
-                  <p style={{ color: '#ccc', fontSize: '.85rem', margin: 0 }}>2️⃣ Procure por <strong style={{ color: '#00e88f' }}>"Supabase Auth"</strong></p>
-                  <p style={{ color: '#ccc', fontSize: '.85rem', margin: 0 }}>3️⃣ Clique no botão <strong style={{ color: '#00e88f' }}>"Sign in"</strong></p>
-                  <p style={{ color: '#ccc', fontSize: '.85rem', margin: 0 }}>4️⃣ Você será redirecionado automaticamente ✅</p>
-                </div>
-              </div>
+              <input
+                type="text"
+                placeholder="000000"
+                value={otpCode}
+                onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={e => e.key === 'Enter' && verificarCodigo()}
+                maxLength={6}
+                style={{
+                  width: '100%', padding: '16px 20px', background: '#1a1a1a', border: '1px solid #2a2a2a',
+                  borderRadius: 12, fontSize: '1.5rem', color: '#fff', outline: 'none', marginBottom: 16,
+                  boxSizing: 'border-box', textAlign: 'center', letterSpacing: '8px', fontWeight: 700,
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = '#00e88f'}
+                onBlur={e => e.currentTarget.style.borderColor = '#2a2a2a'}
+                autoFocus
+              />
 
-              <p style={{ color: '#888', fontSize: '.8rem', marginBottom: 16 }}>
-                💡 Verifique a pasta <strong>Spam/Lixo eletrônico</strong> se não encontrar
-              </p>
+              <button
+                onClick={verificarCodigo}
+                disabled={authLoading || otpCode.length !== 6}
+                style={{
+                  width: '100%', padding: '16px 24px',
+                  background: (authLoading || otpCode.length !== 6) ? '#333' : 'linear-gradient(135deg, #00e88f, #00b8d4)',
+                  color: (authLoading || otpCode.length !== 6) ? '#888' : '#0a0a0a', border: 'none', borderRadius: 12,
+                  fontSize: '1rem', fontWeight: 700, cursor: (authLoading || otpCode.length !== 6) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {authLoading ? '⏳ Verificando...' : '✅ Confirmar Código'}
+              </button>
 
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
                 <button
-                  onClick={() => { setEmailSent(false); setAuthError(''); }}
+                  onClick={() => { setOtpSent(false); setOtpCode(''); setAuthError(''); }}
                   style={{ background: 'none', border: 'none', color: '#888', fontSize: '.85rem', cursor: 'pointer' }}
                 >
                   ← Trocar email
                 </button>
                 <button
-                  onClick={enviarLink}
+                  onClick={enviarCodigo}
                   disabled={countdown > 0 || authLoading}
                   style={{
                     background: 'none', border: 'none',
@@ -296,7 +323,7 @@ export default function PlataformaPage() {
                     fontSize: '.85rem', cursor: countdown > 0 ? 'default' : 'pointer',
                   }}
                 >
-                  {countdown > 0 ? `Reenviar em ${countdown}s` : '🔄 Reenviar email'}
+                  {countdown > 0 ? `Reenviar em ${countdown}s` : '🔄 Reenviar código'}
                 </button>
               </div>
             </>
@@ -365,7 +392,6 @@ export default function PlataformaPage() {
   // ============ PLATAFORMA — LISTA DE MÓDULOS ============
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a' }}>
-      {/* HEADER */}
       <nav style={{ background: '#141414', borderBottom: '1px solid #2a2a2a', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
         <span style={{ fontWeight: 800, fontSize: '1.2rem', background: 'linear-gradient(135deg, #00e88f, #00b8d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ADS Master Pro</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -380,7 +406,6 @@ export default function PlataformaPage() {
         </div>
       </nav>
 
-      {/* CONTEÚDO */}
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 8 }}>
@@ -394,7 +419,6 @@ export default function PlataformaPage() {
           </p>
         </div>
 
-        {/* LISTA DE MÓDULOS */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {MODULOS.map(mod => (
             <div key={mod.id} onClick={() => {
@@ -434,7 +458,6 @@ export default function PlataformaPage() {
           ))}
         </div>
 
-        {/* BOTÃO CENTRAL DE LIBERAR */}
         {!paid && (
           <div style={{ textAlign: 'center', marginTop: 32 }}>
             <button onClick={gerarPagamento} disabled={paymentLoading} style={{
